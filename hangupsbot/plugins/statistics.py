@@ -101,8 +101,7 @@ def _conversation_user_memory_get(bot, conv_id, user_id, keyname):
 def displaystats(bot, event, *args):
     """ Display all the important stats """
 
-    segments = [hangups.ChatMessageSegment('Statistics:',is_bold=True),
-                hangups.ChatMessageSegment('\n', hangups.SegmentType.LINE_BREAK)]
+    html = '<b>Statistics:</b><br />'
 
     """ Total Messages """
     totalmessages = bot.conversation_memory_get(event.conv_id, 'total_messages')
@@ -119,9 +118,7 @@ def displaystats(bot, event, *args):
         time_start = float(time_start)
     minutes_since_start = (time.time() - time_start) / 60
     messages_per_minute = totalmessages / minutes_since_start
-    segments.append(hangups.ChatMessageSegment("Messages/Minute for chat: {0:.2f}".format(messages_per_minute)))
-    segments.append(hangups.ChatMessageSegment('\n', hangups.SegmentType.LINE_BREAK))
-    segments.append(hangups.ChatMessageSegment('\n', hangups.SegmentType.LINE_BREAK))
+    html += "Messages/Minute for chat: <b>{0:.2f}</b><br /><br />".format(messages_per_minute)
 
     """ User Last Active """
     users_in_chat = event.conv.users
@@ -144,20 +141,18 @@ def displaystats(bot, event, *args):
 
                 if time_since_last > 60:
                     time_since_last = time_since_last / 60
-                    segments.append(hangups.ChatMessageSegment("User {} last spoke {} hours ago".format(user.full_name, round(time_since_last, 2))))
+                    html += "User <i>{}</i> last spoke <b>{}</b> hours ago<br />".format(user.full_name, round(time_since_last, 2))
                 else:
-                    segments.append(hangups.ChatMessageSegment("User {} last spoke {} minutes ago".format(user.full_name, round(time_since_last, 2))))
+                    html += "User <i>{}</i> last spoke <b>{}</b> minutes ago<br />".format(user.full_name, round(time_since_last, 2))
             else:
-                segments.append(hangups.ChatMessageSegment("User {} last spoke {} seconds ago".format(user.full_name, round(time_since_last, 2))))
-            segments.append(hangups.ChatMessageSegment('\n', hangups.SegmentType.LINE_BREAK))
-    segments.append(hangups.ChatMessageSegment('\n', hangups.SegmentType.LINE_BREAK))
+                html += "User <i>{}</i> last spoke <b>{}</b> seconds ago<br />".format(user.full_name, round(time_since_last, 2))
+    html += "<br />"
 
     """ Percentage of messages sent """
     for user in users_in_chat:
         user_percentage = _conversation_user_memory_get(bot, event.conv_id, user.id_.chat_id, 'total_messages')
         if user_percentage is not None:
             user_percentage = (int(user_percentage) / totalmessages) * 100
-            segments.append(hangups.ChatMessageSegment("User {} contributed to {}% of this chat".format(user.full_name, round(user_percentage, 2))))
-            segments.append(hangups.ChatMessageSegment('\n', hangups.SegmentType.LINE_BREAK))
+            html += "User <i>{}</i> contributed to <b>{}%</b> of this chat<br />".format(user.full_name, round(user_percentage, 2))
 
-    bot.send_message_segments(event.conv, segments)
+    bot.send_html_to_conversation(event.conv, html)
