@@ -118,6 +118,7 @@ def displaystats(bot, event, *args):
         time_start = float(time_start)
     minutes_since_start = (time.time() - time_start) / 60
     messages_per_minute = totalmessages / minutes_since_start
+    print("Total messages: {0}, Minutes since start: {1}".format(totalmessages, minutes_since_start))
     html += "Messages/Minute for chat: <b>{0:.2f}</b><br /><br />".format(messages_per_minute)
 
     """ User Last Active """
@@ -132,8 +133,12 @@ def displaystats(bot, event, *args):
                     users_in_chat += bot.get_users_in_conversation(syncedroom)
             users_in_chat = list(set(users_in_chat)) # make unique
 
+    html += "<b>Activity and Contribution:</b><br />"
+    fmt = '<b>{0:15}</b> | {1:>6}{2}'
+
     for user in users_in_chat:
         user_time = _conversation_user_memory_get(bot, event.conv_id, user.id_.chat_id, 'user_last_active')
+        user_percentage = _conversation_user_memory_get(bot, event.conv_id, user.id_.chat_id, 'total_messages')
         if user_time is not None:
             time_since_last = (float(time.time()) - float(user_time))
             if time_since_last > 60:
@@ -141,18 +146,20 @@ def displaystats(bot, event, *args):
 
                 if time_since_last > 60:
                     time_since_last = time_since_last / 60
-                    html += "User <i>{}</i> last spoke <b>{}</b> hours ago<br />".format(user.full_name, round(time_since_last, 2))
+                    if time_since_last > 24:
+                        time_since_last = time_since_last / 24
+                        html += fmt.format(user.full_name, round(time_since_last, 2), 'd')
+                    else:
+                        html += fmt.format(user.full_name, round(time_since_last, 2), 'h')
                 else:
-                    html += "User <i>{}</i> last spoke <b>{}</b> minutes ago<br />".format(user.full_name, round(time_since_last, 2))
+                    html += fmt.format(user.full_name, round(time_since_last, 2), 'm')
             else:
-                html += "User <i>{}</i> last spoke <b>{}</b> seconds ago<br />".format(user.full_name, round(time_since_last, 2))
-    html += "<br />"
+                html += fmt.format(user.full_name, round(time_since_last, 2), 's')
 
-    """ Percentage of messages sent """
-    for user in users_in_chat:
-        user_percentage = _conversation_user_memory_get(bot, event.conv_id, user.id_.chat_id, 'total_messages')
-        if user_percentage is not None:
-            user_percentage = (int(user_percentage) / totalmessages) * 100
-            html += "User <i>{}</i> contributed to <b>{}%</b> of this chat<br />".format(user.full_name, round(user_percentage, 2))
+            if user_percentage is not None:
+                user_percentage = (int(user_percentage) / totalmessages) * 100
+                html += " | {0}%<br />".format(round(user_percentage, 2))
+
+    html += "<br />"
 
     bot.send_html_to_conversation(event.conv, html)
