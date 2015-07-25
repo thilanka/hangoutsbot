@@ -1,0 +1,43 @@
+#!/bin/sh
+#
+# Initialize the IITC casperjs and run
+#
+# Make sure the proper google email/password is in AUTHFILE
+# <email>
+# <password>
+#
+AUTHFILE=$HOME/.config/iitcbot/authentication
+COOKIES=$HOME/.local/share/iitcbot/cookies
+IITCJS=$HOME/hangoutsbot/hangupsbot/plugins/iitc/iitc.js
+
+if [ ! -d `dirname $COOKIES` ] ; then
+   mkdir -p -m 700 `dirname $COOKIES`
+fi
+
+if [ ! -f $AUTHFILE ] ; then
+   echo "ERROR: login information file $AUTHFILE not found" ; exit 2
+fi
+
+# security note:
+# if you don't have your localhost certificate properly set up, you'll
+# need --ignore-ssl-errors=true when accessing the callback sink
+
+
+# security note:
+# if you don't have the sink "webserver" send
+# Access-Control-Allow-Origin: https://ingress.com
+# you'll need --web-security=false to allow cross-site XHTTP requests
+#
+# this should get fixed or the casperjs script could do malicious
+# callouts to other domains
+
+/usr/local/bin/casperjs --cookies-file=$COOKIES \
+			--iitcauth=$AUTHFILE \
+			--web-security=false \
+			--ignore-ssl-errors=true \
+			$IITCJS \
+ | egrep -v --line-buffered "HTMLScriptElement is not a|refreshing chat"
+
+# the grep at the end is to filter some bugs and kill the repeated
+# "refreshing chat" message -- this is a kludge for now until the bugs
+# get squashed
