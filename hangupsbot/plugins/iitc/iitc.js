@@ -26,6 +26,8 @@ casper.options.retryTimeout = 2000;
 casper.options.waitTimeout = 2 * 60 * 1000;
 casper.viewport(1920, 1080);
 
+var fs = require('fs');
+
 var iitcauth = '.iitcbot.authentication';
 if (casper.cli.has("iitcauth")) {
     iitcauth = casper.cli.get("iitcauth");
@@ -33,8 +35,21 @@ if (casper.cli.has("iitcauth")) {
 
 var logtime = casper.cli.has("logtime");
 
+var ipcpath = casper.cli.get("ipc");
+var ipcstream;
+
+if (ipcpath) {
+   ipcstream = fs.open(ipcpath, 'a');
+   casper.echo('Writing IPC-DATA to ' + ipcpath);
+}
+
 // send console logs to stdout
 casper.on('remote.message', function(message) {
+    if (message.match(/^IPC-DATA: /) && ipcstream) {
+        ipcstream.write(message.substring(10));
+	return;
+    }
+
     casper.echo(logtime ? new Date() + " " + message : message);
 });
 
@@ -67,7 +82,6 @@ var iitc_password; // XXX refactor so never globally scoped
 
 casper.thenOpen('https://www.google.com/accounts/ServiceLogin?service=ah&passive=true&continue=https://appengine.google.com/_ah/conflogin%3Fcontinue%3Dhttps://www.ingress.com/intel&ltmpl=',
     function() {
-        var fs = require('fs');
         var email, password;
 
         if (fs.isReadable(iitcauth)) {
@@ -153,24 +167,26 @@ casper.then(function _injectIITC() {
         }
     });
 
-    var local_base = 'ingress-intel-total-conversion/build/local/';
+    // var local_base = 'ingress-intel-total-conversion/build/local/';
+    var local_base = '';
     var local_scripts = [
-        /*
-                'total-conversion-build.user.js',
-                'plugins/privacy-view.user.js',
-                'plugins/portal-highlighter-high-level.user.js',
-                'plugins/portal-level-numbers.user.js',
-                'plugins/draw-tools.user.js',
-                'plugins/cross_link.user.js',
-                'plugins/done-links.user.js',
-                'plugins/player-tracker.user.js',
+//        'ipc-debug.user.js'
+/*
+        'total-conversion-build.user.js',
+        'plugins/privacy-view.user.js',
+        'plugins/portal-highlighter-high-level.user.js',
+        'plugins/portal-level-numbers.user.js',
+        'plugins/draw-tools.user.js',
+        'plugins/cross_link.user.js',
+        'plugins/done-links.user.js',
+        'plugins/player-tracker.user.js',
 
-                // nonstandard local build
-                'plugins/better-show-more.user.js',
-                'plugins/iitc-advanced-player-tracker.user.js',
-                'plugins/iitc-custom-player-icons.user.js',
-                'plugins/iitc-hide-ui.user.js'
-        */
+        // nonstandard local build
+        'plugins/better-show-more.user.js',
+        'plugins/iitc-advanced-player-tracker.user.js',
+        'plugins/iitc-custom-player-icons.user.js',
+        'plugins/iitc-hide-ui.user.js'
+*/
     ];
 
     // inject local IITC build and/or optional local scripts
