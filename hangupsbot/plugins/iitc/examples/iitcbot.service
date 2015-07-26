@@ -3,7 +3,7 @@ Description=IITC screen capture
 After=network-online.target
 
 [Service]
-WorkingDirectory=/home/hangoutsbot
+WorkingDirectory=/home/hangoutsbot/hangoutsbot/hangupsbot/plugins/iitc
 ExecStart=/home/hangoutsbot/hangoutsbot/hangupsbot/plugins/iitc/iitcbot
 User=hangoutsbot
 Group=hangoutsbot
