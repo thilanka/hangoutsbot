@@ -8,7 +8,6 @@
 #
 AUTHFILE=$HOME/.config/iitcbot/authentication
 COOKIES=$HOME/.local/share/iitcbot/cookies
-IITCJS=$HOME/hangoutsbot/hangupsbot/plugins/iitc/iitc.js
 
 if [ ! -d `dirname $COOKIES` ] ; then
    mkdir -p -m 700 `dirname $COOKIES`
@@ -35,7 +34,7 @@ fi
 			--iitcauth=$AUTHFILE \
 			--web-security=false \
 			--ignore-ssl-errors=true \
-			$IITCJS \
+			iitc.js $* \
  | egrep -v --line-buffered "HTMLScriptElement is not a|refreshing chat"
 
 # the grep at the end is to filter some bugs and kill the repeated
