@@ -79,7 +79,7 @@ which should include something like:
     "jsonrpc": [
       {
         "certfile": "/home/hangoutsbot/.config/hangupsbot/localhost.pem",
-        "module": "sinks.generic.simpledemo.webhookReceiver",
+        "module": "sinks.generic.SimpleMessagePoster",
         "name": "localhost",
         "port": 9002
       }
