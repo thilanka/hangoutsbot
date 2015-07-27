@@ -14,6 +14,11 @@
 //				  (technically unnecessary after first run if
 //				   you want to delete it for security reasons,
 //				   but the cookies do eventually expire ~30d
+//   --ipc			- logging channel for IPC information
+//   --extra-scripts=<file.js>[, <file>.js ...]
+//   				- comma separated list of additional js to
+//   				  inject
+//
 var casper = require('casper').create({
     verbose: true,
     logLevel: 'info',
@@ -34,6 +39,12 @@ if (casper.cli.has("iitcauth")) {
 }
 
 var logtime = casper.cli.has("logtime");
+
+var extra_script_arg = casper.cli.get("extra-scripts");
+var extra_scripts = [];
+if (extra_script_arg) {
+    extra_scripts = extra_script_arg.split(",");
+}
 
 var ipcpath = casper.cli.get("ipc");
 var ipcstream;
@@ -66,7 +77,7 @@ casper.on('page.error', function(msg, trace) {
 });
 
 casper.thenOpen('https://ingress.com/intel');
-casper.thenBypassUnless(function() {
+casper.thenBypassUnless(function checkNeedsSignin() {
     var needSignIn = this.evaluate(function() {
         return __utils__.getElementByXPath('.//a[starts-with(.,"Sign in")]');
     });
@@ -81,7 +92,7 @@ casper.thenBypassUnless(function() {
 var iitc_password; // XXX refactor so never globally scoped
 
 casper.thenOpen('https://www.google.com/accounts/ServiceLogin?service=ah&passive=true&continue=https://appengine.google.com/_ah/conflogin%3Fcontinue%3Dhttps://www.ingress.com/intel&ltmpl=',
-    function() {
+    function sendEmail() {
         var email, password;
 
         if (fs.isReadable(iitcauth)) {
@@ -108,14 +119,14 @@ casper.thenOpen('https://www.google.com/accounts/ServiceLogin?service=ah&passive
         iitc_password = password;
     });
 
-casper.waitForSelector('#Passwd', function() {
+casper.waitForSelector('#Passwd', function sendPassword() {
     this.sendKeys("#Passwd", iitc_password);
     this.click("#signIn");
     iitc_password = undefined;
 });
 
 casper.waitForUrl(/https:\/\/www\.ingress\.com\/intel/);
-casper.then(function() {
+casper.then(function saveCookies() {
     var cookies = this.page.cookies;
 
     // save the cookies for fast login and avoiding authentication triggers
@@ -142,7 +153,7 @@ casper.then(function() {
 });
 
 // Inject IITC
-casper.then(function _injectIITC() {
+casper.then(function injectIITC() {
     // inject standard IITC remote scripts, if any
     this.evaluate(function() {
         var head = document.getElementsByTagName('head')[0];
@@ -167,10 +178,8 @@ casper.then(function _injectIITC() {
         }
     });
 
-    // var local_base = 'ingress-intel-total-conversion/build/local/';
-    var local_base = '';
+    var local_base = 'ingress-intel-total-conversion/build/local/';
     var local_scripts = [
-//        'ipc-debug.user.js'
 /*
         'total-conversion-build.user.js',
         'plugins/privacy-view.user.js',
@@ -189,7 +198,7 @@ casper.then(function _injectIITC() {
 */
     ];
 
-    // inject local IITC build and/or optional local scripts
+    // inject local IITC build
     for (i in local_scripts) {
         var success = this.page.injectJs(local_base + local_scripts[i]);
         if (success) {
@@ -198,7 +207,18 @@ casper.then(function _injectIITC() {
             casper.echo(local_scripts[i] + " failed to load!")
         }
     }
+
+    // inject extra scripts (no base)
+    for (i in extra_scripts) {
+        var success = this.page.injectJs(extra_scripts[i]);
+        if (success) {
+            casper.echo(local_scripts[i] + " loaded")
+        } else {
+            casper.echo(local_scripts[i] + " failed to load!")
+        }
+    }
 });
+
 
 // wait for IITC to fully load
 casper.waitFor(function checkIITCLoaded() {
@@ -317,7 +337,7 @@ function processQueue() {
             var png = casper.captureBase64('png');
             // casper.capture('iitc-debug.png');
 
-            casper.page.evaluate(function(cur, png) {
+            casper.page.evaluate(function sendImage(cur, png) {
                 var res = __utils__.sendAJAX(cur.callback, 'POST',
                     JSON.stringify({
                         image: {
@@ -339,7 +359,7 @@ function processQueue() {
 }
 
 function draw_action(data) {
-    casper.page.evaluate(function(data) {
+    casper.page.evaluate(function drawPoly(data) {
         if (data['action'] == 'load') {
             window.prompt = function() {
                 return data['json']
