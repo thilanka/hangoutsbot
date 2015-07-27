@@ -2,7 +2,7 @@
 
 The original author is unknown, I've been trying to trace them down,
 if you recognize this as your code, please contact me.  I've done a bit
-of refactoring and fixed it, but it's derrivative of someone else's work.
+of refactoring and fixed it, but it's derivative of someone else's work.
 	-- discontent /at/ resists.org - 24 July 2015
 
 You do not have permission to redistribute this code, it is pre-alpha,
@@ -45,9 +45,9 @@ By default, these commands are all restricted to bot administrators.
 2. sinks/generic/simpledemo.py
   - listens for responses on localhost:9002
 3. plugins/iitc/{iitc.js | iitcbot }
-  - headless browser captureing Intel commands
+  - headless browser capturing Intel commands
   - listens for requests on localhost:31337
-  - returns responses to the simpledemo sink asynchronously
+  - returns responses to the generic SimpleMessagePoster sink asynchronously
 
 ## Requirements:
 
@@ -57,50 +57,58 @@ By default, these commands are all restricted to bot administrators.
 
 The files in this release belong in `hangoutsbot/hangupsbot/plugins/iitc`
 
-Create the following files:
+## Configuration:
 
-    $HOME/.config/iitcbot/authentication
+Create the following files (obviously read-protect the authentication and localhost key!):
+
+ $HOME/.config/iitcbot/authentication
+
       _email_ (first line)
       _password_ (second line)
-      of the Google account running Intel. 2FA is not supported.
 
-    $HOME/.config/hangupsbot/localhost.pem
-      SSL private key and public certificate for localhost (in same file)
+of the Google account running Intel. Google's two-factor authentication is not supported.
+
+Create a OpenSSL .pem, that contains both the public and private keys for this server (iitcbot
+will connect to localhost to return data to hangoutsbot).
 
 You may generate a self-signed key with:
 
     openssl req -new -x509 -days 365 -nodes -keyout localhost.pem -out localhost.pem
 
 Enable the iitc plugin in your bot configuration.
-Enable the generic sink in your bot config.json configuration,
 
-which should include something like:
+Enable the generic sink in your bot config.json configuration,
 
     "jsonrpc": [
       {
-        "certfile": "/home/hangoutsbot/.config/hangupsbot/localhost.pem",
-        "module": "sinks.generic.SimpleMessagePoster",
-        "name": "localhost",
-        "port": 9002
+	"certfile": "/home/hangoutsbot/.config/hangupsbot/localhost.pem",
+	"module": "sinks.generic.SimpleMessagePoster",
+	"name": "localhost",
+	"port": 9002
       }
     ],
 
+Optionally add a section to config.json commands to initiate a start, stop, restart, or status request
+to the iitcbot, if none is added, systemctl is assumed and the default, below, will be executed.
+
+    "iitcbot_control": [ "/usr/bin/sudo", "/bin/systemctl", "<command>", "iitcbot" ]
+
+&lt;command&gt; will be substituted with the appropriate command.
 
 ## Daemon Management
 
 systemd(8) `.service` files are provided for both hangoutsbot and iitcbot
 for folks who use systemd as their process manager. The two bots are
 independent of each other and can be configured to run under separate
-uids if desired (this is reccommended).
+uids if desired (this is recommended).
 
 There are two files, `hangoutsbot.service` and `iitcbot.service` in the
-`examples/` subdirectory which can be used as emables for systemd service
+`examples/` subdirectory which can be used as enables for systemd service
 control files. Copy them to `/etc/systemd/system/` and modify them as
 you choose.
 
 Occasionally the IITCbot will need to be restarted because of a change
-to the intel site, or just a bug. When running systemd, the iitcreload
-command will execute "sudo systemctl restart iitcbot"
+to the intel site, or just a bug.
 
 To add sudo permissions to hangoutsbot user so it can restart iitcbot,
 on a Debian type installation, you may use:
@@ -117,4 +125,3 @@ on a Debian type installation, you may use:
 - [ ] fix errors in casperjs interpretation of iitc
 - [ ] eliminate cross site XHHTP vulnerability if anything upstream gets pwned
       so we can remove "--web-security=false"
-

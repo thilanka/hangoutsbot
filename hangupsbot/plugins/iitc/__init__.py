@@ -4,6 +4,7 @@ import requests
 import subprocess
 import sys
 import html
+import logging
 
 from urllib.parse import urlparse, parse_qs
 from urllib.request import urlopen
@@ -12,6 +13,8 @@ from hangups.ui.utils import get_conv_name
 
 url = "http://localhost:31337/"
 headers = {'content-type': 'application/json'}
+
+logger = logging.getLogger(__name__)
 
 def _initialise(bot):
     plugins.register_admin_command(["iitc", "iitcregion", "iitcdraw"])
@@ -27,9 +30,19 @@ def iitcbot(bot, event, command=None):
         bot.send_html_to_conversation(event.conv_id, "<i>command not specified or invalid</i>")
         return
 
+    control = bot.get_config_suboption(event.conv_id, 'iitcbot_control')
+    if not control:
+        control = [ "/usr/bin/sudo", "/bin/systemctl", "<command>", "iitcbot" ]
+
+    for index,term in enumerate(control):
+        if term == "<command>":
+            control[index] = command
+
     bot.send_html_to_conversation(event.conv_id, "<i>Requesting {}, please wait</i>".format(command))
+
+    logger.info("executing " + " ".join(control))
     try:
-        out = subprocess.check_output(["/usr/bin/sudo", "/bin/systemctl", command, "iitcbot"]).decode("utf-8")
+        out = subprocess.check_output(control).decode("utf-8")
     except subprocess.CalledProcessError as e:
         out = e.output.decode("utf-8")
 
