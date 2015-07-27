@@ -9,12 +9,18 @@
 //
 // options
 //   --logtime			- include timestamp in log files
+//
 //   --cookies-file=<psth>	- stores authentication cookies after first run
+//
 //   --iitcauth=<path>		- location of username/password plaintext file
 //				  (technically unnecessary after first run if
 //				   you want to delete it for security reasons,
 //				   but the cookies do eventually expire ~30d
+//
 //   --ipc			- logging channel for IPC information
+//
+//   --inactivity-timeout=<min> -  exit after x minutes of timeout
+//
 //   --extra-scripts=<file.js>[, <file>.js ...]
 //   				- comma separated list of additional js to
 //   				  inject
@@ -30,6 +36,8 @@ casper.page.settings.resourceTimeout = 62 * 1000;
 casper.options.retryTimeout = 2000;
 casper.options.waitTimeout = 2 * 60 * 1000;
 casper.viewport(1920, 1080);
+
+var MINUTE_IN_MS = 60 * 1000;
 
 var fs = require('fs');
 
@@ -53,6 +61,8 @@ if (ipcpath) {
    ipcstream = fs.open(ipcpath, 'a');
    casper.echo('Writing IPC-DATA to ' + ipcpath);
 }
+
+var inactivity_timeout = casper.cli.get("inactivity-timeout");
 
 // send console logs to stdout
 casper.on('remote.message', function(message) {
@@ -375,13 +385,32 @@ function draw_action(data) {
 
 }
 
+// current time, in minutes
+function curtime() {
+    return time_in_minutes = Date.now() / MINUTE_IN_MS | 0;
+}
+
+
 casper.run(function() {
     var server = require('webserver').create();
+    var	last_command = curtime();
 
     casper.echo('Starting server at ' + new Date(), 'INFO');
 
+    if (inactivity_timeout !== undefined) {
+	casper.echo('Will shut down after ' + inactivity_timeout +
+		    ' minutes of inactivity.', 'INFO');
+	setInterval(function () {
+	    if ((curtime() - last_command) > inactivity_timeout) {
+		casper.echo('Shutting down due to inactivity.', 'INFO');
+		casper.exit(1);
+	    }
+	}, MINUTE_IN_MS);
+    }
+
     service = server.listen(31337, function(request, response) {
         try {
+	    last_command = curtime();	// reset timeout if enabled
             casper.echo('Request at ' + new Date(), 'INFO');
             // casper.echo(JSON.stringify(request, null, 4));
 
