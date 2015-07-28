@@ -27,7 +27,7 @@ def iitcbot(bot, event, command=None):
     Usage: /bot iitcbot <start | stop | restart | status>
     """
     if not command or command not in ["start" , "stop" , "restart", "status" ]:
-        bot.send_html_to_conversation(event.conv_id, "<i>command not specified or invalid</i>")
+        bot.send_html_to_conversation(event.conv_id, _("<i>command not specified or invalid</i>"))
         return
 
     control = bot.get_config_suboption(event.conv_id, 'iitcbot_control')
@@ -38,7 +38,7 @@ def iitcbot(bot, event, command=None):
         if term == "<command>":
             control[index] = command
 
-    bot.send_html_to_conversation(event.conv_id, "<i>Requesting {}, please wait</i>".format(command))
+    bot.send_html_to_conversation(event.conv_id, _("<i>Requesting {}, please wait</i>").format(command))
 
     logger.info("executing " + " ".join(control))
     try:
@@ -63,7 +63,7 @@ def iitc(bot, event, *args):
     """
 
     if not args:
-        bot.send_html_to_conversation(event.conv_id, "no region specified<br/><i>try /bot help iitc and /bot help iitcregion</i>")
+        bot.send_html_to_conversation(event.conv_id, _("<i>no region specified</i>"))
         return
 
     memory = bot.get_memory_option('iitcregion')
@@ -77,11 +77,11 @@ def iitc(bot, event, *args):
             headers = {'content-type': 'application/json'}
             try:
               r = requests.post(url, data = json.dumps(payload), headers = headers, verify=False)
-              bot.send_html_to_conversation(event.conv_id, "<i>loading {}, please wait</i>".format(region))
+              bot.send_html_to_conversation(event.conv_id, _("<i>loading {}, please wait</i>").format(region))
             except requests.exceptions.ConnectionError:
-              bot.send_html_to_conversation(event.conv_id, "<i>iitcbot not ready</i>")
+              bot.send_html_to_conversation(event.conv_id, _("<i>iitcbot not ready</i>"))
         else:
-            bot.send_html_to_conversation(event.conv_id, "<i>region {} not defined</i>".format(region))
+            bot.send_html_to_conversation(event.conv_id, _("<i>region {} not defined</i>").format(region))
 
 def iitcregion(bot, event, name=None, url=None):
     """
@@ -93,7 +93,7 @@ def iitcregion(bot, event, name=None, url=None):
         memory = list(memory.keys())
         memory.sort()
         regions = ", ".join(memory)
-        bot.send_html_to_conversation(event.conv_id, "<i>{}: configured regions: {}</i>".format(event.user.full_name,
+        bot.send_html_to_conversation(event.conv_id, _("<i>{}: configured regions: {}</i>").format(event.user.full_name,
 regions))
         return
     parsed = urlparse(url)
@@ -107,7 +107,7 @@ regions))
         bot.memory.set_by_path(['iitcregion'], {})
     bot.memory.set_by_path(["iitcregion", name], obj)
     bot.memory.save()
-    bot.send_html_to_conversation(event.conv_id, "<i>{}: {} saved</i>".format(event.user.full_name, name))
+    bot.send_html_to_conversation(event.conv_id, _("<i>{}: {} saved</i>").format(event.user.full_name, name))
 
 def iitcdraw(bot, event, action=None, name=None, plan=None):
     """
@@ -123,7 +123,7 @@ def iitcdraw(bot, event, action=None, name=None, plan=None):
     if not action:
         memory = bot.get_memory_option('iitcdraw')
         plans = ', '.join(memory)
-        bot.send_html_to_conversation(event.conv_id, "<i>{}: configured plans: {}</i>".format(event.user.full_name, plans))
+        bot.send_html_to_conversation(event.conv_id, _("<i>{}: configured plans: {}</i>").format(event.user.full_name, plans))
         return
     elif action == 'store' and name and plan:
         name = name.lower()
@@ -133,25 +133,25 @@ def iitcdraw(bot, event, action=None, name=None, plan=None):
             pass
         bot.memory.set_by_path(["iitcdraw", name], plan)
         bot.memory.save()
-        bot.send_html_to_conversation(event.conv_id, "<i>{}: {} saved</i>".format(event.user.full_name, name))
+        bot.send_html_to_conversation(event.conv_id, _("<i>{}: {} saved</i>").format(event.user.full_name, name))
     elif action == 'clear':
         try:
             r = requests.post(url, data = json.dumps({"action":"clear"}), headers = headers, verify=False)
-            bot.send_html_to_conversation(event.conv_id, "<i>current plan cleared</i>")
+            bot.send_html_to_conversation(event.conv_id, _("<i>current plan cleared</i>"))
         except requests.exceptions.ConnectionError:
-            bot.send_html_to_conversation(event.conv_id, "<i>iitcbot not ready</i>")
+            bot.send_html_to_conversation(event.conv_id, _("<i>iitcbot not ready</i>"))
     else:
         action = action.lower()
         try:
             plan = bot.memory.get_by_path(["iitcdraw", action])
         except KeyError:
-            bot.send_html_to_conversation(event.conv_id, "<i>no such plan: {}</i>".format(action))
+            bot.send_html_to_conversation(event.conv_id, _("<i>no such plan: {}</i>").format(action))
             return
         if type(plan) is list:
             plan = json.dumps(plan)
         payload = {"action": "load", "json": plan}
         try:
             r = requests.post(url, data = json.dumps(payload), headers = headers, verify=False)
-            bot.send_html_to_conversation(event.conv_id, "<i>{} sent to iitcbot</i>".format(action))
+            bot.send_html_to_conversation(event.conv_id, _("<i>{} sent to iitcbot</i>").format(action))
         except requests.exceptions.ConnectionError:
-            bot.send_html_to_conversation(event.conv_id, "<i>iitcbot not ready</i>")
+            bot.send_html_to_conversation(event.conv_id, _("<i>iitcbot not ready</i>"))
