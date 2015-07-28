@@ -30,8 +30,8 @@ This module provides new hangoutsbot commands:
     /bot iitcdraw store _plan_ _polygon_
       Store an IITC drawtools polygon as a "plan"
 
-    /bot iitcdaemon status | start | stop | restart
-      Restart the IITCbot process
+    /bot iitcbot status | start | stop | restart
+      Control the IITCbot process
 
 By default, these commands are all restricted to only administrators.
 
