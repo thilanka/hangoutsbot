@@ -42,17 +42,15 @@ By default, these commands are all restricted to bot administrators.
 
 1. plugins/iitc
   - maintains IITC stateful data and issues commands to iitcbot
-2. sinks/generic/simpledemo.py
-  - listens for responses on localhost:9002
-3. plugins/iitc/{iitc.js | iitcbot }
+2. plugins/iitc/{iitc.js | iitcbot }
   - headless browser capturing Intel commands
   - listens for requests on localhost:31337
   - returns responses to the generic SimpleMessagePoster sink asynchronously
 
 ## Requirements:
 
-- http://github.com/hangoutsbot/hangupsbot (v3.6 or later)
-- http://phantomjs.org (tested with v2.0)
+- http://github.com/hangoutsbot/hangupsbot (v2.6 (2.5-staging) or later)
+- http://phantomjs.org (tested with v2.0.1)
 - http://casperjs.org (tested with 1.1-beta3)
 
 The files in this release belong in `hangoutsbot/hangupsbot/plugins/iitc`
