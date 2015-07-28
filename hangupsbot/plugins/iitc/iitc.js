@@ -42,6 +42,8 @@ var MINUTE_IN_MS = 60 * 1000;
 var fs = require('fs');
 
 var iitcauth = '.iitcbot.authentication';
+var iitcsnap = 'iitc-debug-snapshot.png';
+
 if (casper.cli.has("iitcauth")) {
     iitcauth = casper.cli.get("iitcauth");
 }
@@ -84,6 +86,12 @@ casper.on('page.error', function(msg, trace) {
         }
     }
     casper.echo(logtime ? new Date() + " Error: " + msg : "Error: " + msg, 'ERROR');
+
+    if (msg.indexOf("cannot continue") != -1) {
+	casper.echo("IITC scripts aren't working, shutting down.", 'ERROR')
+	//casper.capture(iitcsnap);
+	casper.exit(1);
+    }
 });
 
 casper.thenOpen('https://ingress.com/intel');
@@ -209,24 +217,20 @@ casper.then(function injectIITC() {
     ];
 
     // inject local IITC build
-    for (i in local_scripts) {
-        var success = this.page.injectJs(local_base + local_scripts[i]);
-        if (success) {
-            casper.echo(local_scripts[i] + " loaded")
-        } else {
-            casper.echo(local_scripts[i] + " failed to load!")
-        }
-    }
+    function load_iitcbot_scripts(win, scripts, base) {
+	var index;
+	for (index in scripts) {
+	    var success = win.page.injectJs(base + scripts[index]);
+	    if (success) {
+		casper.echo(scripts[index] + " loaded", 'INFO')
+	    } else {
+		casper.echo(scripts[index] + " failed to load!", 'ERROR')
+	    }
+	}
+    };
 
-    // inject extra scripts (no base)
-    for (i in extra_scripts) {
-        var success = this.page.injectJs(extra_scripts[i]);
-        if (success) {
-            casper.echo(local_scripts[i] + " loaded")
-        } else {
-            casper.echo(local_scripts[i] + " failed to load!")
-        }
-    }
+    load_iitcbot_scripts(this, local_scripts, local_base);
+    load_iitcbot_scripts(this, extra_scripts, '');
 });
 
 
@@ -345,7 +349,7 @@ function processQueue() {
 
             casper.echo('Processing ' + JSON.stringify(cur), 'INFO');
             var png = casper.captureBase64('png');
-            // casper.capture('iitc-debug.png');
+            // casper.capture(iitcsnap);
 
             casper.page.evaluate(function sendImage(cur, png) {
                 var res = __utils__.sendAJAX(cur.callback, 'POST',
