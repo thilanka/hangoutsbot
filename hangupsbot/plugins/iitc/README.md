@@ -59,15 +59,28 @@ The files in this release belong in `hangoutsbot/hangupsbot/plugins/iitc`
 
 ## Configuration:
 
-Create the following files (obviously read-protect the authentication and localhost key!):
+### Ingress Authentication
 
- $HOME/.config/iitcbot/authentication
+Create an authentication file containing the e-mail and password of the
+Ingress Player that will be responsible for iitcbot. Please note that
+while IITCbot might now be considered loosely acceptable per private
+discussions with Niantic employees, it is a headless browser and you may
+get caught in an intel-ban for scraping data.
 
-      _email_ (first line)
-      _password_ (second line)
+In order to not violate the ToS (multiple accounts), we strongly reccomend
+that you use your actual Ingress account and not create a special account
+just for iitcbot.
 
-of the Google account running Intel. Google's two-factor authentication
-is not supported.
+The first line should be the e-mail address of your Ingress account, the
+second should be your password, in plain text. Two factor authentication
+is not supported. This file should be read-protected from all other users,
+ideally, you might consider running iitcbot under a different uid from
+the Hangouts.
+
+You may specify the location of the autentication file with
+`--auth-file=path-to-file`
+
+### Hangoutsbot Sink SSL Certificate
 
 Create a OpenSSL .pem, that contains both the public and private keys
 for this server (iitcbot will connect to localhost to return data to
@@ -77,9 +90,9 @@ You may generate a self-signed key with:
 
     openssl req -new -x509 -days 365 -nodes -keyout localhost.pem -out localhost.pem
 
-Enable the iitc plugin in your bot configuration.
+Enable the iitc plugin in your Hangoutsbot configuration.
 
-Enable the generic sink in your bot config.json configuration,
+Enable the generic sink in your Hangoutsbot config.json configuration and add
 
     "jsonrpc": [
       {
@@ -90,28 +103,32 @@ Enable the generic sink in your bot config.json configuration,
       }
     ],
 
-Optionally add a section to 'config.json' commands to initiate a start,
-stop, restart, or status request to the iitcbot, if none is added,
-sudo and systemctl are assumed and the default, below, will be executed.
+### Managing IITCbot
+
+Optionally add a section to 'config.json' to override the default commands
+used to initiate start, stop, restart, or status requests to the iitcbot.
+
+By default, a sudo / systemd environment assumed if nothing is added:
 
     "iitcbot_control": [ "/usr/bin/sudo", "/bin/systemctl", "<command>", "iitcbot" ]
 
 &lt;command&gt; will be substituted with the appropriate command.
 
-## Daemon Management
+If one were to use upstart, one could specify:
+
+    "iitcbot_control": [ "/usr/bin/sudo", "<command>", "iitcbot" ]
 
 systemd(8) `.service` files are provided for both hangoutsbot and iitcbot
 for folks who use systemd as their process manager. The two bots are
-independent of each other and can be configured to run under separate
-uids if desired (this is recommended).
-
-There are two files, `hangoutsbot.service` and `iitcbot.service` in the
-`examples/` subdirectory which can be used to support systemd service
-management. Copy them to `/etc/systemd/system/` and modify them as
-you choose.
+independent of each other and can be configured to run under separate uids
+if desired (this is recommended).  Copy them to `/etc/systemd/system/`
+and modify them as you choose.
 
 Occasionally the IITCbot will need to be restarted because of a change
 to the intel site, or just a bug.
+
+
+#### sudo(8) notes
 
 To add sudo permissions to hangoutsbot user so it can restart iitcbot,
 on a Debian type installation, you might use:
