@@ -8,22 +8,29 @@
 // casperjs --web-security=false --ignore-ssl-errors=true --verbose --cookies-file=iitcbot.cookies
 //
 // options
-//   --logtime			- include timestamp in log files
-//
-//   --cookies-file=<psth>	- stores authentication cookies after first run
-//
-//   --iitcauth=<path>		- location of username/password plaintext file
+//   --auth-file=<path>		- location of username/password plaintext file
 //				  (technically unnecessary after first run if
 //				   you want to delete it for security reasons,
 //				   but the cookies do eventually expire ~30d
 //
-//   --ipc			- logging channel for IPC information
+//   --cookies-file=<psth>	- stores authentication cookies after first run
 //
-//   --inactivity-timeout=<min> -  exit after x minutes of timeout
+//   --ipc-file			- logging channel for IPC information
 //
 //   --extra-scripts=<file.js>[, <file>.js ...]
 //   				- comma separated list of additional js to
 //   				  inject
+//
+//   --highlight="<highlight>	- selected highligher level
+//   				  (default "Higher Level Portals")
+//
+//   --basemap="<basemap>"	- selected base map
+//   				  (default "Google Roads")
+//
+//   --logtime			- include timestamp in log files
+//
+//   --inactivity-timeout=<min> -  exit after x minutes of timeout
+//
 //
 var casper = require('casper').create({
     verbose: true,
@@ -37,35 +44,43 @@ casper.options.retryTimeout = 2000;
 casper.options.waitTimeout = 2 * 60 * 1000;
 casper.viewport(1920, 1080);
 
-var MINUTE_IN_MS = 60 * 1000;
-var PAGE_WAIT = 40;				// 80 seconds
-
 var fs = require('fs');
 
-var iitcauth = '.iitcbot.authentication';
-var iitcsnap = 'iitc-debug-snapshot.png';
+var MINUTE_IN_MS = 60 * 1000;
+var PAGE_WAIT = 40;				// 80 seconds
+var iitc_snapshot = 'iitc-debug-snapshot.png';
 
-if (casper.cli.has("iitcauth")) {
-    iitcauth = casper.cli.get("iitcauth");
+// Command options
+
+var iitc_authfile = '.iitcbot.authentication';
+if (casper.cli.has("auth-file"))
+    iitc_authfile = casper.cli.get("auth-file");
+
+// --cookies-file is phantomjs native
+
+var iitc_ipc_file = casper.cli.get("ipc-file");
+
+var iitc_extra_scripts  = [];
+if (casper.cli.has("extra-scripts"))
+    iitc_extra_scripts = casper.cli.get("extra-scripts").split(",");
+
+var iitc_highlight = 'Higher Level Portals';
+if (casper.cli.has("highlight"))
+   iitc_highlight = casper.cli.get("highlight");
+
+var iitc_basemap = 'Google Roads';
+if (casper.cli.has("basemap"))
+   iitc_basemap = casper.cli.get("basemap");
+
+var iitc_logtime = casper.cli.has("logtime");
+
+var iitc_inactivity_timeout = casper.cli.get("inactivity-timeout");
+
+// setup IPC/debugging dump to the outside world
+if (iitc_ipc_file) {
+   ipcstream = fs.open(iitc_ipc_file, 'a');
+   casper.echo('Writing IPC-DATA to ' + iitc_ipc_file, 'INFO');
 }
-
-var logtime = casper.cli.has("logtime");
-
-var extra_script_arg = casper.cli.get("extra-scripts");
-var extra_scripts = [];
-if (extra_script_arg) {
-    extra_scripts = extra_script_arg.split(",");
-}
-
-var ipcpath = casper.cli.get("ipc");
-var ipcstream;
-
-if (ipcpath) {
-   ipcstream = fs.open(ipcpath, 'a');
-   casper.echo('Writing IPC-DATA to ' + ipcpath);
-}
-
-var inactivity_timeout = casper.cli.get("inactivity-timeout");
 
 // send console logs to stdout
 casper.on('remote.message', function(message) {
@@ -74,7 +89,7 @@ casper.on('remote.message', function(message) {
 	return;
     }
 
-    casper.echo(logtime ? new Date() + " " + message : message);
+    casper.echo(iitc_logtime ? new Date() + " " + message : message);
 });
 
 casper.on('page.error', function(msg, trace) {
@@ -86,7 +101,7 @@ casper.on('page.error', function(msg, trace) {
             casper.echo('Unable to stringify', 'ERROR')
         }
     }
-    casper.echo(logtime ? new Date() + " Error: " + msg : "Error: " + msg, 'ERROR');
+    casper.echo(iitc_logtime ? new Date() + " Error: " + msg : "Error: " + msg, 'ERROR');
 
     if (msg.indexOf("cannot continue") != -1) {
 	casper.echo("IITC scripts aren't working, shutting down.", 'ERROR')
@@ -114,16 +129,12 @@ casper.thenOpen('https://www.google.com/accounts/ServiceLogin?service=ah&passive
     function sendEmail() {
         var email, password;
 
-        if (fs.isReadable(iitcauth)) {
-            auth = fs.open(iitcauth, {
-                mode: 'r'
-            });
-            if (!auth.atEnd()) {
+        if (fs.isReadable(iitc_authfile)) {
+            auth = fs.open(iitc_authfile, { mode: 'r' });
+            if (!auth.atEnd())
                 email = auth.readLine();
-            }
-            if (!auth.atEnd()) {
+            if (!auth.atEnd())
                 password = auth.readLine();
-            }
             auth.close();
         }
 
@@ -218,20 +229,21 @@ casper.then(function injectIITC() {
     ];
 
     // inject local IITC build
-    function load_iitcbot_scripts(win, scripts, base) {
+    function load_iitcbot_scripts(scripts, base) {
 	var index;
 	for (index in scripts) {
-	    var success = win.page.injectJs(base + scripts[index]);
+	    casper.echo("Loading " + scripts[index], 'INFO');
+	    var success = casper.page.injectJs(base + scripts[index]);
 	    if (success) {
-		casper.echo(scripts[index] + " loaded", 'INFO')
+		casper.echo(scripts[index] + " loaded", 'INFO');
 	    } else {
-		casper.echo(scripts[index] + " failed to load!", 'ERROR')
+		casper.echo(scripts[index] + " failed to load!", 'ERROR');
 	    }
 	}
     };
 
-    load_iitcbot_scripts(this, local_scripts, local_base);
-    load_iitcbot_scripts(this, extra_scripts, '');
+    load_iitcbot_scripts(local_scripts, local_base);
+    load_iitcbot_scripts(iitc_extra_scripts, '');
 });
 
 
@@ -244,7 +256,11 @@ casper.waitFor(function checkIITCLoaded() {
 });
 
 casper.then(function setIITCOption() {
-    this.evaluate(function() {
+
+    casper.echo('Basemap = ' + iitc_basemap, 'INFO');
+    casper.echo('Highlight = ' + iitc_highlight, 'INFO');
+
+    this.evaluate(function(base, highlight) {
         window.alert = function(msg) {
             console.log("ALERT: " + msg, 'ERROR')
         }
@@ -276,9 +292,9 @@ casper.then(function setIITCOption() {
         document.hidden = true;
         var baseLayers = window.layerChooser.getLayers().baseLayers;
         for (var l in baseLayers) {
-            if (baseLayers[l].name == 'Google Roads') {
+            if (baseLayers[l].name == base) {
                 window.layerChooser.showLayer(baseLayers[l].layerId);
-                console.log(baseLayers[1].name + ' enabled');
+                console.log(baseLayers[l].name + ' enabled');
                 break;
             }
         }
@@ -302,7 +318,7 @@ casper.then(function setIITCOption() {
             $('#sidebartoggle').click();
 
 	// highlight high level portals (for targeting)
-	window.changePortalHighlights('Higher Level Portals');
+	window.changePortalHighlights(highlight);
 
 	// turn off extra crap privacy viewer missed
 	// we use both in case IITC changes upstream
@@ -312,7 +328,7 @@ casper.then(function setIITCOption() {
 	$('#portal_highlight_select').hide();
 	$('.leaflet-control-container').hide();
 	$('.leaflet-control').hide();
-    });
+    }, iitc_basemap, iitc_highlight);
 });
 
 function checkStatus() {
@@ -428,11 +444,11 @@ casper.run(function() {
 
     casper.echo('Starting server at ' + new Date(), 'INFO');
 
-    if (inactivity_timeout !== undefined) {
-	casper.echo('Will shut down after ' + inactivity_timeout +
+    if (iitc_inactivity_timeout !== undefined) {
+	casper.echo('Will shut down after ' + iitc_inactivity_timeout +
 		    ' minutes of inactivity.', 'INFO');
 	setInterval(function () {
-	    if ((curtime() - last_command) > inactivity_timeout) {
+	    if ((curtime() - last_command) > iitc_inactivity_timeout) {
 		casper.echo('Shutting down due to inactivity.', 'INFO');
 		casper.exit(1);
 	    }

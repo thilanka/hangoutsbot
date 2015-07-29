@@ -1,16 +1,16 @@
-# Hangoutsbot IITC plugin
+# Hangupsbot IITC plugin
 
 ## Description
 
 This module provides an interface to Ingress Intel maps from the
-hangoutsbot bot interface.
+Hangupsbot interface.
 
 You do not have permission to redistribute this code, it is pre-alpha,
 do not share it.
 
 ### Usage
 
-This module provides new hangoutsbot commands:
+This module provides new Hangupsbot commands:
 
     /bot iitc _region_
       Show a current intel map for the defined region
@@ -43,11 +43,12 @@ of his code. Credit for this idea belongs to him.
 ## Components
 
 1. plugins/iitc
-  - maintains IITC stateful data and issues commands to iitcbot
-2. plugins/iitc/{iitc.js | iitcbot }
+  - maintains IITC stateful data and issues commands to IITCbot
+2. plugins/iitc/{ iitc.js | iitcbot }
   - headless browser capturing Intel commands
   - listens for requests on localhost:31337
-  - returns responses to the generic SimpleMessagePoster sink asynchronously
+  - asynchronously responses to Hangupsbot through the generic
+    SimpleMessagePoster
 
 ## Requirements:
 
@@ -62,51 +63,60 @@ The files in this release belong in `hangoutsbot/hangupsbot/plugins/iitc`
 ### Ingress Authentication
 
 Create an authentication file containing the e-mail and password of the
-Ingress Player that will be responsible for iitcbot. Please note that
+Ingress Player that will be responsible for IITCbot. Please note that
 while IITCbot might now be considered loosely acceptable per private
 discussions with Niantic employees, it is a headless browser and you may
 get caught in an intel-ban for scraping data.
 
 In order to not violate the ToS (multiple accounts), we strongly reccomend
 that you use your actual Ingress account and not create a special account
-just for iitcbot.
+just for IITCbot.
 
 The first line should be the e-mail address of your Ingress account, the
 second should be your password, in plain text. Two factor authentication
 is not supported. This file should be read-protected from all other users,
-ideally, you might consider running iitcbot under a different uid from
+ideally, you might consider running IITCbot under a different uid from
 the Hangouts.
 
 You may specify the location of the autentication file with
-`--auth-file=path-to-file`
+`--auth-file=path-to-file` in the `iitcbot` shell script.
 
-### Hangoutsbot Sink SSL Certificate
+### Hangupsbot Sink SSL Certificate
 
 Create a OpenSSL .pem, that contains both the public and private keys
-for this server (iitcbot will connect to localhost to return data to
-hangoutsbot).
+for this server (IITCbot will connect to localhost to return data to
+Hangupsbot).
 
 You may generate a self-signed key with:
 
     openssl req -new -x509 -days 365 -nodes -keyout localhost.pem -out localhost.pem
 
-Enable the iitc plugin in your Hangoutsbot configuration.
+Enable the iitc plugin in your Hangupsbot configuration.
 
-Enable the generic sink in your Hangoutsbot config.json configuration and add
+Enable the generic sink in your Hangupsbot config.json configuration and add
 
     "jsonrpc": [
       {
-	"certfile": "/home/hangoutsbot/.config/hangupsbot/localhost.pem",
+	"certfile": "/home/myusername/.config/hangupsbot/localhost.pem",
 	"module": "sinks.generic.SimpleMessagePoster",
 	"name": "localhost",
 	"port": 9002
       }
     ],
 
-### Managing IITCbot
+
+### iitcbot shell script options
+
+The `iitcbot` shell script invokes IITCbot with a number of options.
+Feel free to copy and modify the shell script to match your enviornment.
+
+Command line options that may be passed to the `iitcbot` script
+or added to the script are in the front comments of iitc.js
+
+### Managing IITCbot from Hangupsbot
 
 Optionally add a section to 'config.json' to override the default commands
-used to initiate start, stop, restart, or status requests to the iitcbot.
+used to initiate start, stop, restart, or status requests to the IITCbot.
 
 By default, a sudo / systemd environment assumed if nothing is added:
 
@@ -118,7 +128,7 @@ If one were to use upstart, one could specify:
 
     "iitcbot_control": [ "/usr/bin/sudo", "<command>", "iitcbot" ]
 
-systemd(8) `.service` files are provided for both hangoutsbot and iitcbot
+systemd(8) `.service` files are provided for both Hangupsbot and IITCbot
 for folks who use systemd as their process manager. The two bots are
 independent of each other and can be configured to run under separate uids
 if desired (this is recommended).  Copy them to `/etc/systemd/system/`
@@ -130,8 +140,9 @@ to the intel site, or just a bug.
 
 #### sudo(8) notes
 
-To add sudo permissions to hangoutsbot user so it can restart iitcbot,
-on a Debian type installation, you might use:
+To add sudo permissions to user (if that user was called hangoutsbot) running
+Hangupsbot user so it can restart IITCbot, on a Debian type distribution, you
+could modify this example:
 
     echo "hangoutsbot ALL= NOPASSWD: /bin/systemctl restart iitcbot,/bin/systemctl start iitcbot,/bin/systemctl stop iitcbot,/bin/systemctl status iitcbot" \
 	     >/etc/sudoers.d/hangoutsbot
@@ -142,6 +153,5 @@ on a Debian type installation, you might use:
 
 - [ ] ability to delete plans and region definitions
 - [ ] role-based authorization system to allow commands beyond bot administrators
-- [ ] fix errors in casperjs interpretation of iitc
 - [ ] eliminate cross site XHHTP vulnerability if anything upstream gets pwned
       so we can remove "--web-security=false"
