@@ -3,7 +3,7 @@ Description=Google Hangouts Robot
 After=network-online.target
 
 [Service]
-ExecStart=/usr/local/bin/python3 /home/hangoutsbot/hangoutsbot/hangupsbot/hangupsbot.py
+ExecStart=/home/hangoutsbot/hangoutsbot/hangupsbot/hangupsbot.py
 Restart=on-failure
 User=hangoutsbot
 Group=hangoutsbot
