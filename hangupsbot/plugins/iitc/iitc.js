@@ -275,7 +275,7 @@ casper.then(function setIITCOption() {
         document.hidden = true;
         var baseLayers = window.layerChooser.getLayers().baseLayers;
         for (var l in baseLayers) {
-            if (baseLayers[l].name == 'Google Default Ingress Map') {
+            if (baseLayers[l].name == 'Google Roads') {
                 window.layerChooser.showLayer(baseLayers[l].layerId);
                 console.log(baseLayers[1].name + ' enabled');
                 break;
@@ -299,6 +299,18 @@ casper.then(function setIITCOption() {
         var sidebar = $('#scrollwrapper');
         if (sidebar.is(':visible'))
             $('#sidebartoggle').click();
+
+	// highlight high level portals (for targeting)
+	window.changePortalHighlights('Higher Level Portals');
+
+	// turn off extra crap privacy viewer missed
+	// we use both in case IITC changes upstream
+	$('#privacycontrols').hide();
+	$('#chatcontrols, #chat, #chatinput').hide();
+	$('#sidebartoggle, #scrollwrapper').hide();
+	$('#portal_highlight_select').hide();
+	$('.leaflet-control-container').hide();
+	$('.leaflet-control').hide();
     });
 });
 
