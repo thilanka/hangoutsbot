@@ -381,13 +381,14 @@ function processQueue() {
             // casper.capture(iitcsnap);
 
             casper.page.evaluate(function sendImage(cur, png) {
+            	var d = new Date();
                 var res = __utils__.sendAJAX(cur.callback, 'POST',
                     JSON.stringify({
                         image: {
                             base64encoded: png,
                             filename: cur.name + '.png'
                         },
-                        echo: 'IITC snapshot of <a href="https://www.ingress.com/intel?ll=' + cur.latlng + '&z=' + cur.zoom + '">' + cur.name + '</a> at ' + new Date
+                        echo: 'IITC snapshot of <a href="https://www.ingress.com/intel?ll=' + cur.latlng + '&z=' + cur.zoom + '">' + cur.name + '</a> at ' + d.toLocaleString()
                     }), false, {
                         contentType: 'application/json'
                     });
