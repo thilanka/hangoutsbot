@@ -38,6 +38,7 @@ casper.options.waitTimeout = 2 * 60 * 1000;
 casper.viewport(1920, 1080);
 
 var MINUTE_IN_MS = 60 * 1000;
+var PAGE_WAIT = 40;				// 80 seconds
 
 var fs = require('fs');
 
@@ -356,7 +357,7 @@ function processQueue() {
 
     var step = 0;
     var interval = setInterval(function _check(self) {
-        if (checkStatus() || ++step > 60) {
+        if (checkStatus() || ++step > PAGE_WAIT) {
             clearInterval(interval);
 
             casper.echo('Processing ' + JSON.stringify(cur), 'INFO');
@@ -379,9 +380,23 @@ function processQueue() {
 
             processQueue();
         } else {
-            casper.echo('waitng for page to complete ' + step, 'INFO');
+            casper.echo('waitng for page to complete ' + step + '/' + PAGE_WAIT, 'INFO');
         }
     }, 2000);
+
+    // we timed out, sigh...
+    if (step > PAGE_WAIT) {
+	casper.echo('timeout waiting for page to complete', 'ERROR');
+	casper.page.evaluate(function sendTimeout(cur) {
+                var res = __utils__.sendAJAX(cur.callback, 'POST',
+                    JSON.stringify({
+			echo: 'IITC snapshot of <a href="https://www.ingress.com/intel?ll=' + cur.latlng + '&z=' + cur.zoom + '">' + cur.name + '</a> at ' + new Date + ': timed out, please retry later'
+                    }), false, {
+                        contentType: 'application/json'
+                    });
+                console.log('Response: ' + JSON.stringify(res));
+            }, cur);
+    }
 }
 
 function draw_action(data) {
