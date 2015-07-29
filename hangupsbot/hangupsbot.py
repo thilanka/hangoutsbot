@@ -19,6 +19,8 @@ from handlers import handler # shim for handler decorator
 from utils import simple_parse_to_segments, class_from_name
 
 import permamem
+import tagging
+
 import hooks
 import sinks
 import plugins
@@ -261,15 +263,24 @@ class HangupsBot(object):
                     self._client.on_disconnect.add_observer(self._on_disconnect)
 
                     loop.run_until_complete(self._client.connect())
+
+                    self.memory.flush()
+                    self.config.flush()
+
+                    logging.info("bot is exiting")
+
                     sys.exit(0)
                 except Exception as e:
                     logging.exception("CLIENT: unrecoverable low-level error")
-                    print(_('Client unexpectedly disconnected:\n{}').format(e))
-                    print(_('Waiting {} seconds...').format(5 + retry * 5))
+                    print('Client unexpectedly disconnected:\n{}'.format(e))
+                    print('Waiting {} seconds...'.format(5 + retry * 5))
                     time.sleep(5 + retry * 5)
-                    print(_('Trying to connect again (try {} of {})...').format(retry + 1, self._max_retries))
+                    print('Trying to connect again (try {} of {})...'.format(retry + 1, self._max_retries))
 
-            print(_('Maximum number of retries reached! Exiting...'))
+            print('Maximum number of retries reached! Exiting...')
+
+        logging.info("valid login required, exiting")
+
         sys.exit(1)
 
     def stop(self):
@@ -475,6 +486,8 @@ class HangupsBot(object):
         """find a 1-to-1 conversation with specified user
         maintained for functionality with older plugins that do not use get_1to1()
         """
+        logging.warning('[DEPRECATED]: yield from bot.get_1to1(chat_id), instead of bot.get_1on1_conversation(chat_id)')
+
         self.initialise_memory(chat_id, "user_data")
 
         if self.memory.exists(["user_data", chat_id, "optout"]):
@@ -583,7 +596,7 @@ class HangupsBot(object):
         return {
             "source": source,
             "importance": importance,
-            "tags": tags
+            "tags": tags # NOT RELATED with bot.tags or tagging module
         }
 
     def _messagecontext_legacy(self):
@@ -614,6 +627,7 @@ class HangupsBot(object):
                                                    initial_data.sync_timestamp)
 
         self.conversations = yield from permamem.initialise_permanent_memory(self)
+        self.tags = tagging.tags(self)
 
         plugins.load(self, command)
 
@@ -723,7 +737,7 @@ class HangupsBot(object):
         self.send_message_parsed(conversation_id, html, context)
 
     def send_html_to_user(self, user_id, html, context=None):
-        conversation = self.get_1on1_conversation(user_id)
+        conversation = yield from self.get_1to1(user_id)
         if not conversation:
             logging.warning("1-to-1 not found for {}".format(user_id))
             return False
